@@ -1,0 +1,34 @@
+#!/bin/sh
+
+FILES=$(find "/usr/share/applications" "$HOME/.local/share/applications" -name "*.desktop")
+
+NAMES=""
+BYNAMES=""
+
+while IFS= read -r FILE; do
+    NAME=$(grep "^Name=" "$FILE" 2>/dev/null | head -n 1 | cut -d "=" -f2)
+    if [ -z "$NAME" ]; then
+        NAME=$(grep "^Name[en]=" "$FILE" 2>/dev/null | head -n 1 | cut -d "=" -f2)
+    fi
+    if [ -z "$NAME" ]; then
+        continue
+    fi
+    BYNAMES="$BYNAMES$NAME;$FILE\n"
+    NAMES="$NAMES$NAME\n"
+done <<< $FILES
+
+NAME=$(echo -e $NAMES | sort | dmenu)
+
+while IFS= read -r LINE; do
+    PROG_NAME="$(echo ${LINE} | cut -d ';' -f1)"
+    PROG_FILE="$(echo ${LINE} | cut -d ';' -f2)"
+    # echo -e "LINE: $LINE"
+    # echo -e "PROG: $PROG_NAME $PROG_FILE $NAME"
+
+    if [ "$PROG_NAME" == "$NAME" ]; then
+        FILE="$PROG_FILE"
+    fi
+done <<< $(echo -e $BYNAMES)
+
+PROG=$(grep "^Exec=" "$FILE" | head -n 1 | cut -d "=" -f2 | sed -e 's/\%.//g')
+$PROG
